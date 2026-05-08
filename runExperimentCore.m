@@ -422,8 +422,8 @@ end
 % Development fallback for this bench setup: known Pico signature on macOS.
 if ~found && statusSp == 0
     outLower = lower(char(outSp));
-    hasPicoSignature = ~isempty(strfind(outLower, 'serial number:')) && ~isempty(strfind(outLower, 'd105402')) ...
-        && ~isempty(strfind(outLower, 'manufacturer:')) && ~isempty(strfind(outLower, 'syringe pump'));
+    hasPicoSignature = contains(outLower, 'serial number:') && contains(outLower, 'd105402') ...
+        && contains(outLower, 'manufacturer:') && contains(outLower, 'syringe pump');
     if hasPicoSignature
         warning("Relaxed VID matcher used Pico signature fallback (D105402 + Syringe Pump). Confirm VID in strict mode before deployment.");
         found = true;
@@ -449,7 +449,7 @@ end
 
 % Match common decimal idVendor representation in ioreg trees.
 decPattern = ['(?<![0-9])' regexptranslate('escape', requiredDec) '(?![0-9])'];
-if ~isempty(strfind(txt, 'idvendor')) && ~isempty(regexpi(txt, decPattern, 'once'))
+if contains(txt, 'idvendor') && ~isempty(regexpi(txt, decPattern, 'once'))
     tf = true;
     return;
 end
@@ -467,7 +467,7 @@ blocks = splitIoRegBlocks(out);
 portBlock = "";
 for i = 1:numel(blocks)
     blk = blocks{i};
-    if ~isempty(strfind(lower(char(blk)), lower(char(selectedPort))))
+    if contains(lower(char(blk)), lower(char(selectedPort)))
         portBlock = char(blk);
         break;
     end
@@ -493,27 +493,40 @@ function verifyVendorIdWindows(requiredVidHex, selectedPort)
 vidTag = ['VID_' upper(char(normalizeHex(requiredVidHex)))];
 port = upper(char(selectedPort));
 
-% Use PowerShell CIM query and require both COM port name and VID match.
-ps = [ ...
-    "$port='" port "'; " ...
-    "$vid='" vidTag "'; " ...
-    "$dev=Get-CimInstance Win32_PnPEntity | Where-Object { $_.Name -like ('*(' + $port + ')*') -and $_.PNPDeviceID -like ('*' + $vid + '*') } | Select-Object -First 1; " ...
-    "if($dev){$dev.PNPDeviceID}" ...
-    ];
+% Attempt 1: Use WMIC to query PnP devices by COM port and VID.
+vidTagNorm = regexprep(upper(char(normalizeHex(requiredVidHex))), '^0X', 'VID_');
+wmicCmd = sprintf('wmic path Win32_SerialPort where "Name=''%s''" get PNPDeviceID', port);
+[statusWmic, outWmic] = system(wmicCmd);
 
-cmd = "powershell -NoProfile -ExecutionPolicy Bypass -Command """ + ps + """";
-[status, out] = system(cmd);
-
-if status ~= 0
-    error("VID handshake failed on Windows while querying PnP entities for %s.", selectedPort);
+if statusWmic == 0 && ~isempty(strtrim(outWmic))
+    pnpLines = strtrim(split(outWmic, newline));
+    for i = 1:numel(pnpLines)
+        line = char(pnpLines(i));
+        if contains(line, vidTagNorm) || contains(line, 'PNPDeviceID')
+            continue;
+        end
+        if ~isempty(strtrim(line))
+            fprintf("VID handshake passed for %s: %s\n", selectedPort, strtrim(line));
+            return;
+        end
+    end
 end
 
-pnpId = strtrim(out);
-if isempty(pnpId)
-    error("VID mismatch or port mismatch: could not find %s with %s.", selectedPort, vidTag);
+% Attempt 2: Fallback to simple PowerShell COM port existence check.
+psCmd = sprintf('Get-WmiObject Win32_SerialPort | Where-Object {$_.Name -eq ''%s''} | Select-Object -ExpandProperty PNPDeviceID', port);
+ps = sprintf('powershell -NoProfile -ExecutionPolicy Bypass -Command "%s"', psCmd);
+[statusPs, outPs] = system(ps);
+
+if statusPs == 0 && ~isempty(strtrim(outPs))
+    pnpId = strtrim(outPs);
+    if contains(pnpId, vidTagNorm)
+        fprintf("VID handshake passed for %s: %s\n", selectedPort, pnpId);
+        return;
+    end
 end
 
-fprintf("VID handshake passed for %s: %s\n", selectedPort, pnpId);
+% In 'auto' mode fallback is acceptable; in strict mode, abort.
+error("MATLAB:serialport:vidMismatch", "VID handshake failed: could not verify %s on port %s with %s.", requiredVidHex, selectedPort, vidTagNorm);
 end
 
 function blocks = splitIoRegBlocks(ioText)
@@ -554,8 +567,8 @@ if ~exist(cfg.logRoot, 'dir')
     mkdir(cfg.logRoot);
 end
 
-runStamp = datestr(now, 'yyyymmdd_HHMMSS');
-runFolder = fullfile(cfg.logRoot, [runStamp '_' lower(char(user.mode))]);
+runStamp = string(datetime("now", "Format", "yyyyMMdd_HHmmss"));
+runFolder = fullfile(cfg.logRoot, [char(runStamp) '_' lower(char(user.mode))]);
 mkdir(runFolder);
 
 csvPath = fullfile(runFolder, 'events.csv');
@@ -563,13 +576,14 @@ header = 'time_s,beat,phase,rate_nL_min,command,mode,message\n';
 writeTextFile(csvPath, header);
 
 metaPath = fullfile(runFolder, 'metadata.txt');
+timestampStr = string(datetime("now", "Format", "yyyy-MM-dd HH:mm:ss"));
 metaText = sprintf(['timestamp=%s\n' ...
     'port=%s\n' ...
     'baud=%d\n' ...
     'mode=%s\n' ...
     'syringe_profile=%s\n' ...
     'step_volume_nL=%.9f\n'], ...
-    datestr(now, 'yyyy-mm-dd HH:MM:SS'), char(conn.port), conn.baudRate, ...
+    char(timestampStr), char(conn.port), conn.baudRate, ...
     char(user.mode), char(user.syringeProfile), cfg.stepVolume_nL);
 writeTextFile(metaPath, metaText);
 
@@ -602,8 +616,8 @@ else
 end
 out = strrep(out, '"', '''');
 out = strrep(out, ',', ';');
-out = strrep(out, sprintf('\n'), ' ');
-out = strrep(out, sprintf('\r'), ' ');
+out = strrep(out, newline, ' ');
+out = strrep(out, char(13), ' ');
 end
 
 function sendCommand(pumpObj, cfg, op, varargin)
@@ -662,6 +676,19 @@ switch lower(op)
         rateForLog = NaN;
     otherwise
         error("Unknown command operation: %s", op);
+end
+
+% Normalize command to single-row char vector for Windows writeline() compatibility.
+cmdStr = string(cmd);
+if ismissing(cmdStr)
+    cmd = '';
+elseif numel(cmdStr) > 1
+    cmd = char(join(cmdStr, ' '));
+else
+    cmd = char(cmdStr);
+end
+if ~ischar(cmd) || size(cmd, 1) ~= 1
+    cmd = reshape(char(cmd), 1, []);
 end
 
 sent = false;
