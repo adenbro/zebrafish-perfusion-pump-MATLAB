@@ -19,8 +19,8 @@ g.ColumnSpacing = 8;
 g.BackgroundColor = palette.FigureBg;
 
 makeHelpLabel(g, 1, "Mode", @onHelpMode, baseFont, palette);
-ddMode = uidropdown(g, "Items", {'pulse', 'calibrate'}, "Value", 'pulse', "FontSize", baseFont);
-ddMode.Tooltip = "Choose pulse mode for waveform experiments or calibrate mode for steady-flow validation.";
+ddMode = uidropdown(g, "Items", {'pulse', 'smooth'}, "Value", 'pulse', "FontSize", baseFont);
+ddMode.Tooltip = "Choose pulse mode for waveform experiments or smooth mode for continuous flow.";
 ddMode.Layout.Row = 1;
 ddMode.Layout.Column = 2;
 styleInputControl(ddMode, palette);
@@ -101,16 +101,16 @@ efSeg.Layout.Row = 12;
 efSeg.Layout.Column = 2;
 styleInputControl(efSeg, palette);
 
-makeHelpLabel(g, 13, "Calib Rate (uL/min)", @onHelpCalRate, baseFont, palette);
+makeHelpLabel(g, 13, "Smooth Flow Rate (uL/min)", @onHelpCalRate, baseFont, palette);
 efCrate = uieditfield(g, "numeric", "Value", 1.0, "Limits", [eps Inf], "FontSize", baseFont);
-efCrate.Tooltip = "Steady infusion rate for calibration mode.";
+efCrate.Tooltip = "Steady infusion rate for smooth mode.";
 efCrate.Layout.Row = 13;
 efCrate.Layout.Column = 2;
 styleInputControl(efCrate, palette);
 
-makeHelpLabel(g, 14, "Calib Duration (s)", @onHelpCalDuration, baseFont, palette);
+makeHelpLabel(g, 14, "Smooth Duration (s)", @onHelpCalDuration, baseFont, palette);
 efCdur = uieditfield(g, "numeric", "Value", 120, "Limits", [10 Inf], "FontSize", baseFont);
-efCdur.Tooltip = "Duration for calibration dispense.";
+efCdur.Tooltip = "Duration for smooth-flow dispense.";
 efCdur.Layout.Row = 14;
 efCdur.Layout.Column = 2;
 styleInputControl(efCdur, palette);
@@ -136,7 +136,7 @@ logHint.Layout.Row = 17;
 logHint.Layout.Column = 2;
 
 makeStandardLabel(g, 18, "Mode Note", baseFont, palette);
-modeHint = uilabel(g, "Text", "Physiology mode: zebrafish-safe pulse range enabled.", "FontSize", baseFont - 1, "FontColor", palette.TextMain);
+modeHint = uilabel(g, "Text", "Pulse mode: waveform control enabled.", "FontSize", baseFont - 1, "FontColor", palette.TextMain);
 modeHint.WordWrap = "on";
 modeHint.Layout.Row = 18;
 modeHint.Layout.Column = 2;
@@ -318,10 +318,17 @@ updateDerivedDisplays();
     end
 
     function updateModeHint()
+        mainMode = string(ddMode.Value);
         pulseMode = string(ddPulseDelivery.Value);
         syringeProfile = string(ddSyr.Value);
 
-        if pulseMode == "bench"
+        if mainMode == "smooth"
+            if syringeProfile == "terumo_1mL"
+                modeHint.Text = "Smooth mode: continuous flow for priming, calibration, and simple validation. 1 mL uses step rounding.";
+            else
+                modeHint.Text = "Smooth mode: continuous flow for priming, calibration, and simple validation.";
+            end
+        elseif pulseMode == "bench"
             if syringeProfile == "terumo_1mL"
                 modeHint.Text = "Bench mode: high-flow diagnostics enabled; 1 mL stroke will be step-rounded and reported below.";
             else
@@ -364,11 +371,11 @@ updateDerivedDisplays();
     end
 
     function lines = buildCommandPreview(effectiveSv)
-        if string(ddMode.Value) == "calibrate"
+        if string(ddMode.Value) == "smooth"
             lines = [ ...
                 sprintf("irate %.6f u/m", efCrate.Value)
                 "run"
-                sprintf("... wait %.3f s ...", efCdur.Value)
+                sprintf("... flow for %.3f s ...", efCdur.Value)
                 "stop"
                 ];
             return;
@@ -509,9 +516,9 @@ updateDerivedDisplays();
             "Pulse mode:"
             "- Engineering: cycles between systole and diastole commands."
             "- Biology: needed for physiologic hemodynamics and WSS studies."
-            "Calibrate mode (smooth/steady equivalent):"
-            "- Engineering: constant non-pulsatile flow for gravimetry and priming."
-            "- Biology: useful baseline for concentration checks and gentle entry."
+            "Smooth mode (steady-flow equivalent):"
+            "- Engineering: constant non-pulsatile flow for priming and calibration."
+            "- Biology: useful for gentle entry, concentration checks, and first-pass validation."
         ]);
     end
 
@@ -581,8 +588,8 @@ updateDerivedDisplays();
     end
 
     function onHelpCalRate(~, ~)
-        showHelpDialog("Calibration Rate Help", [
-            "Calibration rate is steady flow (uL/min) used in calibrate mode."
+        showHelpDialog("Smooth Flow Rate Help", [
+            "Smooth flow rate is steady flow (uL/min) used in smooth mode."
             "Engineering:"
             "- Compare expected volume to mass-derived measured volume."
             "- Prefer stable mid-range rates to reduce quantization artifacts."
@@ -590,8 +597,8 @@ updateDerivedDisplays();
     end
 
     function onHelpCalDuration(~, ~)
-        showHelpDialog("Calibration Duration Help", [
-            "Calibration duration sets how long steady dispense runs."
+        showHelpDialog("Smooth Duration Help", [
+            "Smooth duration sets how long steady dispense runs."
             "Engineering:"
             "- Longer windows reduce relative balance noise and evaporation bias."
             "- Typical range is 60-180 s depending on target volume."

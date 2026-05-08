@@ -3,7 +3,7 @@
 clear; clc;
 
 user = struct();
-user.mode = "pulse";                    % "pulse" or "calibrate"
+user.mode = "pulse";                    % "pulse" or "smooth"
 user.interactive = false;                % false = fully headless
 user.doPrime = false;
 user.preferredPort = "";                % e.g. "COM4" on Windows, "/dev/tty.usbmodemXXXX" on macOS
@@ -23,7 +23,7 @@ user.systoleDuty = 0.30;
 user.pulseShape = "square";            % "square" or "sinusoidal"
 user.systoleSegments = 12;
 
-% Calibration mode settings
+% Smooth mode settings
 user.calibRate_uL_min = 1.0;
 user.calibDuration_s = 120;
 user.fluidDensity_g_mL = 0.997;

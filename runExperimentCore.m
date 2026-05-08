@@ -43,7 +43,8 @@ try
         sendCommand(pump, cfg, "stop", logger, 0, "prime");
     end
 
-    if strcmpi(user.mode, "calibrate")
+    requestedMode = lower(string(user.mode));
+    if requestedMode == "calibrate" || requestedMode == "smooth"
         runCalibrationMode(pump, cfg, user, conn, logger);
     else
         runPulseMode(pump, cfg, user, conn, logger);
@@ -299,6 +300,7 @@ rate_uL_min = user.calibRate_uL_min;
 duration_s = user.calibDuration_s;
 density_g_mL = user.fluidDensity_g_mL;
 measuredMass_g = user.measuredMass_g;
+modeLabel = "smooth";
 
 if user.interactive
     rate_uL_min = askNumeric("Calibration rate in uL/min (>0): ", eps, inf);
@@ -311,19 +313,19 @@ validateattributes(rate_uL_min, {'numeric'}, {'real', 'finite', '>', 0});
 validateattributes(duration_s, {'numeric'}, {'real', 'finite', '>=', 10});
 validateattributes(density_g_mL, {'numeric'}, {'real', 'finite', '>', 0});
 
-fprintf("\n--- CALIBRATION MODE ---\n");
+fprintf("\n--- SMOOTH FLOW MODE ---\n");
 fprintf("Port: %s @ %d baud\n", conn.port, conn.baudRate);
 fprintf("Syringe: %s\n", cfg.activeSyringe.label);
 fprintf("Current Step Constant: %.6f nL/step\n", cfg.stepVolume_nL);
 fprintf("Dispense Command: %.4f uL/min for %.2f s\n", rate_uL_min, duration_s);
 
-appendRunLog(logger, toc(logger.t0), 0, "calibration", 0, "", "calibrate", ...
+appendRunLog(logger, toc(logger.t0), 0, "smooth", 0, "", modeLabel, ...
     sprintf("rate_uL_min=%.6f;duration_s=%.3f;density_g_mL=%.6f", rate_uL_min, duration_s, density_g_mL));
 
-sendCommand(pump, cfg, "rate", rate_uL_min, "u/m", logger, 0, "calibrate");
-sendCommand(pump, cfg, "run", logger, 0, "calibrate");
-waitSecondsWithStop(duration_s, user, pump, cfg, logger, 0, "calibrate");
-sendCommand(pump, cfg, "stop", logger, 0, "calibrate");
+sendCommand(pump, cfg, "rate", rate_uL_min, "u/m", logger, 0, modeLabel);
+sendCommand(pump, cfg, "run", logger, 0, modeLabel);
+waitSecondsWithStop(duration_s, user, pump, cfg, logger, 0, modeLabel);
+sendCommand(pump, cfg, "stop", logger, 0, modeLabel);
 
 expected_uL = rate_uL_min * (duration_s / 60);
 
@@ -333,7 +335,7 @@ end
 
 if ~isfinite(measuredMass_g) || measuredMass_g <= 0
     fprintf("Measured mass not provided. Expected dispense only: %.4f uL\n", expected_uL);
-    fprintf("Set measuredMass_g and rerun mode='calibrate' to compute corrected constant.\n");
+    fprintf("Set measuredMass_g and rerun mode='smooth' to compute corrected constant.\n");
     return;
 end
 
@@ -346,7 +348,7 @@ fprintf("Measured Volume: %.4f uL\n", measured_uL);
 fprintf("Correction Factor (measured/expected): %.6f\n", correctionFactor);
 fprintf("Suggested step constant: %.6f nL/step\n", suggestedStep_nL);
 
-appendRunLog(logger, toc(logger.t0), 0, "calibration_result", 0, "", "calibrate", ...
+appendRunLog(logger, toc(logger.t0), 0, "calibration_result", 0, "", modeLabel, ...
     sprintf("expected_uL=%.6f;measured_uL=%.6f;factor=%.6f;suggested_nL_step=%.9f", ...
     expected_uL, measured_uL, correctionFactor, suggestedStep_nL));
 end
