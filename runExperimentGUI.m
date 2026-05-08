@@ -4,9 +4,18 @@ function runExperimentGUI()
 baseFont = 12;
 palette = makePalette();
 
+% Auto-center window on screen
+screenSize = get(0, 'ScreenSize'); % [left bottom width height]
+screenWidth = screenSize(3);
+screenHeight = screenSize(4);
+windowWidth = 560;
+windowHeight = min(830, screenHeight - 100); % Leave 100px margin for taskbar/top bar
+windowLeft = max(40, (screenWidth - windowWidth) / 2);
+windowTop = max(40, (screenHeight - windowHeight) / 2);
+
 f = uifigure( ...
     "Name", "Zebrafish Perfusion Control", ...
-    "Position", [100 100 560 840], ...
+    "Position", [windowLeft windowTop windowWidth windowHeight], ...
     "Color", palette.FigureBg, ...
     "CloseRequestFcn", @onCloseFigure);
 
