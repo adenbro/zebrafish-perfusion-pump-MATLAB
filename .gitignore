@@ -1,0 +1,23 @@
+# MATLAB
+*.asv
+*.m~
+*.p
+*.mex*
+*.slx
+*.mlapp
+*.mlappinstall
+*.mat
+*.fig
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/
+
+# Python/Node envs
+env/
+venv/
+node_modules/
