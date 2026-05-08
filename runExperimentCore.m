@@ -296,20 +296,21 @@ sendCommand(pump, cfg, "stop", logger, beatIndex, "pulse");
 end
 
 function runCalibrationMode(pump, cfg, user, conn, logger)
-rate_uL_min = user.calibRate_uL_min;
+% GUI passes smooth flow rate in nl/min, send directly to pump
+rate_nl_min = user.calibRate_uL_min;
 duration_s = user.calibDuration_s;
 density_g_mL = user.fluidDensity_g_mL;
 measuredMass_g = user.measuredMass_g;
 modeLabel = "smooth";
 
 if user.interactive
-    rate_uL_min = askNumeric("Calibration rate in uL/min (>0): ", eps, inf);
+    rate_nl_min = askNumeric("Calibration rate in nl/min (>0): ", eps, inf);
     duration_s = askNumeric("Calibration duration in seconds (>=10): ", 10, inf);
     density_g_mL = askNumeric("Fluid density in g/mL (0.8-1.2 typical): ", 0.8, 1.2);
     input("Tare balance and place collection vial. Press ENTER to start calibration dispense...", "s");
 end
 
-validateattributes(rate_uL_min, {'numeric'}, {'real', 'finite', '>', 0});
+validateattributes(rate_nl_min, {'numeric'}, {'real', 'finite', '>', 0});
 validateattributes(duration_s, {'numeric'}, {'real', 'finite', '>=', 10});
 validateattributes(density_g_mL, {'numeric'}, {'real', 'finite', '>', 0});
 
@@ -317,17 +318,17 @@ fprintf("\n--- SMOOTH FLOW MODE ---\n");
 fprintf("Port: %s @ %d baud\n", conn.port, conn.baudRate);
 fprintf("Syringe: %s\n", cfg.activeSyringe.label);
 fprintf("Current Step Constant: %.6f nL/step\n", cfg.stepVolume_nL);
-fprintf("Dispense Command: %.4f uL/min for %.2f s\n", rate_uL_min, duration_s);
+fprintf("Dispense Command: %.4f nl/min for %.2f s\n", rate_nl_min, duration_s);
 
 appendRunLog(logger, toc(logger.t0), 0, "smooth", 0, "", modeLabel, ...
-    sprintf("rate_uL_min=%.6f;duration_s=%.3f;density_g_mL=%.6f", rate_uL_min, duration_s, density_g_mL));
+    sprintf("rate_nl_min=%.6f;duration_s=%.3f;density_g_mL=%.6f", rate_nl_min, duration_s, density_g_mL));
 
-sendCommand(pump, cfg, "rate", rate_uL_min, "u/m", logger, 0, modeLabel);
+sendCommand(pump, cfg, "rate", rate_nl_min, "nl/m", logger, 0, modeLabel);
 sendCommand(pump, cfg, "run", logger, 0, modeLabel);
 waitSecondsWithStop(duration_s, user, pump, cfg, logger, 0, modeLabel);
 sendCommand(pump, cfg, "stop", logger, 0, modeLabel);
 
-expected_uL = rate_uL_min * (duration_s / 60);
+expected_uL = (rate_nl_min / 1000) * (duration_s / 60);
 
 if user.interactive
     measuredMass_g = askNumeric("Enter measured collected mass in grams: ", eps, inf);
@@ -1015,7 +1016,7 @@ user.systoleDuty = 0.30;
 user.pulseShape = "square";
 user.systoleSegments = 12;
 
-user.calibRate_uL_min = 1.0;
+user.calibRate_uL_min = 15.0; % GUI provides nl/min; core passes to pump with nl/m unit
 user.calibDuration_s = 120;
 user.fluidDensity_g_mL = 0.997;
 user.measuredMass_g = NaN;

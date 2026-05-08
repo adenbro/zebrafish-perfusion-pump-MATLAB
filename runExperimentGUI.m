@@ -53,7 +53,7 @@ ddPreset.Layout.Column = 2;
 styleInputControl(ddPreset, palette);
 
 makeHelpLabel(g, 5, "Syringe Profile", @onHelpSyringe, baseFont, palette);
-ddSyr = uidropdown(g, "Items", {'hamilton_100uL', 'terumo_1mL', 'terumo_10mL'}, "Value", 'terumo_1mL', "ValueChangedFcn", @onSyringeChanged, "FontSize", baseFont);
+ddSyr = uidropdown(g, "Items", {'hamilton_100uL', 'terumo_1mL', 'terumo_10mL'}, "Value", 'hamilton_100uL', "ValueChangedFcn", @onSyringeChanged, "FontSize", baseFont);
 ddSyr.Tooltip = "Sets syringe geometry used for step-size and effective stroke calculations.";
 ddSyr.Layout.Row = 5;
 ddSyr.Layout.Column = 2;
@@ -121,9 +121,9 @@ sectionLabel3 = uilabel(g, "Text", "SMOOTH VARIABLES", "FontSize", baseFont + 1,
 sectionLabel3.Layout.Row = 15;
 sectionLabel3.Layout.Column = [1 2];
 
-makeHelpLabel(g, 16, "Smooth Flow Rate (uL/min)", @onHelpCalRate, baseFont, palette);
+makeHelpLabel(g, 16, "Smooth Flow Rate (nl/min)", @onHelpCalRate, baseFont, palette);
 efCrate = uieditfield(g, "numeric", "Value", 1.0, "Limits", [eps Inf], "FontSize", baseFont);
-efCrate.Tooltip = "Steady infusion rate for smooth mode.";
+efCrate.Tooltip = "Steady infusion rate in nl/min for smooth mode.";
 efCrate.Layout.Row = 16;
 efCrate.Layout.Column = 2;
 styleInputControl(efCrate, palette);
@@ -244,7 +244,7 @@ updateDerivedDisplays();
         user.pulseShape = string(ddShape.Value);
         user.systoleSegments = efSeg.Value;
 
-        user.calibRate_uL_min = efCrate.Value;
+        user.calibRate_uL_min = efCrate.Value; % Note: GUI is nl/min, core converts to uL/min
         user.calibDuration_s = efCdur.Value;
         user.fluidDensity_g_mL = efDen.Value;
         user.measuredMass_g = efMass.Value;
@@ -604,7 +604,7 @@ updateDerivedDisplays();
 
     function onHelpCalRate(~, ~)
         showHelpDialog("Smooth Flow Rate Help", [
-            "Smooth flow rate is steady flow (uL/min) used in smooth mode."
+            "Smooth flow rate is steady flow (nl/min) used in smooth mode."
             "Engineering:"
             "- Compare expected volume to mass-derived measured volume."
             "- Prefer stable mid-range rates to reduce quantization artifacts."
