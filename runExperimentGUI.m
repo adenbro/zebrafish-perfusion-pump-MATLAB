@@ -6,158 +6,173 @@ palette = makePalette();
 
 f = uifigure( ...
     "Name", "Zebrafish Perfusion Control", ...
-    "Position", [100 100 560 770], ...
+    "Position", [100 100 560 840], ...
     "Color", palette.FigureBg, ...
     "CloseRequestFcn", @onCloseFigure);
 
-g = uigridlayout(f, [24 2]);
-g.RowHeight = {22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 30, 22, 22, 22, 70, 28, 22};
+g = uigridlayout(f, [28 2]);
+g.RowHeight = {28, 22, 22, 22, 22, 22, 22, 28, 22, 22, 22, 22, 22, 22, 28, 22, 22, 28, 22, 22, 22, 30, 22, 22, 22, 70, 28, 22};
 g.ColumnWidth = {220, '1x'};
 g.Padding = [12 12 12 12];
 g.RowSpacing = 4;
 g.ColumnSpacing = 8;
 g.BackgroundColor = palette.FigureBg;
 
-makeHelpLabel(g, 1, "Mode", @onHelpMode, baseFont, palette);
+sectionLabel = uilabel(g, "Text", "MAIN SETTINGS", "FontSize", baseFont + 1, "FontColor", [0.60 0.65 0.70], "FontWeight", "bold");
+sectionLabel.Layout.Row = 1;
+sectionLabel.Layout.Column = [1 2];
+
+makeHelpLabel(g, 2, "Mode", @onHelpMode, baseFont, palette);
 ddMode = uidropdown(g, "Items", {'pulse', 'smooth'}, "Value", 'pulse', "FontSize", baseFont);
 ddMode.Tooltip = "Choose pulse mode for waveform experiments or smooth mode for continuous flow.";
-ddMode.Layout.Row = 1;
+ddMode.Layout.Row = 2;
 ddMode.Layout.Column = 2;
 styleInputControl(ddMode, palette);
 
-makeHelpLabel(g, 2, "Pulse Delivery Mode", @onHelpPulseDelivery, baseFont, palette);
+makeHelpLabel(g, 3, "Pulse Delivery Mode", @onHelpPulseDelivery, baseFont, palette);
 ddPulseDelivery = uidropdown(g, "Items", {'physiology', 'bench'}, "Value", 'physiology', "ValueChangedFcn", @onPulseDeliveryModeChanged, "FontSize", baseFont);
 ddPulseDelivery.Tooltip = "Physiology uses stop-based diastole; bench uses a diastolic floor for diagnostics.";
-ddPulseDelivery.Layout.Row = 2;
+ddPulseDelivery.Layout.Row = 3;
 ddPulseDelivery.Layout.Column = 2;
 styleInputControl(ddPulseDelivery, palette);
 
-makeHelpLabel(g, 3, "Pulse Preset", @onHelpPreset, baseFont, palette);
+makeHelpLabel(g, 4, "Pulse Preset", @onHelpPreset, baseFont, palette);
 ddPreset = uidropdown(g, "Items", {'custom', 'zebrafish_48hpf', 'zebrafish_72hpf', 'zebrafish_96hpf'}, "Value", 'zebrafish_48hpf', "ValueChangedFcn", @onPresetChanged, "FontSize", baseFont);
 ddPreset.Tooltip = "Apply research-validated defaults for developmental stage experiments.";
-ddPreset.Layout.Row = 3;
+ddPreset.Layout.Row = 4;
 ddPreset.Layout.Column = 2;
 styleInputControl(ddPreset, palette);
 
-makeHelpLabel(g, 4, "Syringe Profile", @onHelpSyringe, baseFont, palette);
+makeHelpLabel(g, 5, "Syringe Profile", @onHelpSyringe, baseFont, palette);
 ddSyr = uidropdown(g, "Items", {'hamilton_100uL', 'terumo_1mL', 'terumo_10mL'}, "Value", 'terumo_1mL', "ValueChangedFcn", @onSyringeChanged, "FontSize", baseFont);
 ddSyr.Tooltip = "Sets syringe geometry used for step-size and effective stroke calculations.";
-ddSyr.Layout.Row = 4;
+ddSyr.Layout.Row = 5;
 ddSyr.Layout.Column = 2;
 styleInputControl(ddSyr, palette);
 
-makeStandardLabel(g, 5, "Preferred Port (optional)", baseFont, palette);
+makeStandardLabel(g, 6, "Preferred Port (optional)", baseFont, palette);
 efPort = uieditfield(g, "text", "Value", "", "Placeholder", "COM4 or /dev/tty.usbmodem...", "FontSize", baseFont);
 efPort.Tooltip = "Optional serial port override. Leave empty to auto-select.";
-efPort.Layout.Row = 5;
+efPort.Layout.Row = 6;
 efPort.Layout.Column = 2;
 styleInputControl(efPort, palette);
 
-makeHelpLabel(g, 6, "Prime First", @onHelpPrime, baseFont, palette);
+makeHelpLabel(g, 7, "Prime First", @onHelpPrime, baseFont, palette);
 cbPrime = uicheckbox(g, "Value", false, "Text", "Prime at 10 uL/min", "FontSize", baseFont);
 cbPrime.Tooltip = "Run a short prime before experiment start.";
-cbPrime.Layout.Row = 6;
+cbPrime.Layout.Row = 7;
 cbPrime.Layout.Column = 2;
 
-makeHelpLabel(g, 7, "BPM", @onHelpBpm, baseFont, palette);
+sectionLabel2 = uilabel(g, "Text", "PULSE VARIABLES", "FontSize", baseFont + 1, "FontColor", [0.60 0.65 0.70], "FontWeight", "bold");
+sectionLabel2.Layout.Row = 8;
+sectionLabel2.Layout.Column = [1 2];
+
+makeHelpLabel(g, 9, "BPM", @onHelpBpm, baseFont, palette);
 efBpm = uieditfield(g, "numeric", "Value", 150, "Limits", [60 220], "FontSize", baseFont);
 efBpm.Tooltip = "Beats per minute. Combined with stroke volume, this sets mean flow.";
-efBpm.Layout.Row = 7;
+efBpm.Layout.Row = 9;
 efBpm.Layout.Column = 2;
 styleInputControl(efBpm, palette);
 
-makeHelpLabel(g, 8, "Stroke Volume (nL/beat)", @onHelpSv, baseFont, palette);
+makeHelpLabel(g, 10, "Stroke Volume (nL/beat)", @onHelpSv, baseFont, palette);
 efSv = uieditfield(g, "numeric", "Value", 0.50, "Limits", [0.05 10.0], "FontSize", baseFont);
 efSv.Tooltip = "Theoretical stroke target before syringe-step rounding.";
-efSv.Layout.Row = 8;
+efSv.Layout.Row = 10;
 efSv.Layout.Column = 2;
 styleInputControl(efSv, palette);
 
-makeHelpLabel(g, 9, "Run Time (s)", @onHelpRuntime, baseFont, palette);
+makeHelpLabel(g, 11, "Run Time (s)", @onHelpRuntime, baseFont, palette);
 efRun = uieditfield(g, "numeric", "Value", 30, "Limits", [5 Inf], "FontSize", baseFont);
 efRun.Tooltip = "Total run duration in seconds.";
-efRun.Layout.Row = 9;
+efRun.Layout.Row = 11;
 efRun.Layout.Column = 2;
 styleInputControl(efRun, palette);
 
-makeHelpLabel(g, 10, "Systole Duty", @onHelpDuty, baseFont, palette);
+makeHelpLabel(g, 12, "Systole Duty", @onHelpDuty, baseFont, palette);
 efDuty = uieditfield(g, "numeric", "Value", 0.30, "Limits", [0.1 0.8], "FontSize", baseFont);
 efDuty.Tooltip = "Fraction of each beat spent in systole. Typical embryonic target is around 0.3.";
-efDuty.Layout.Row = 10;
+efDuty.Layout.Row = 12;
 efDuty.Layout.Column = 2;
 styleInputControl(efDuty, palette);
 
-makeHelpLabel(g, 11, "Pulse Shape", @onHelpShape, baseFont, palette);
+makeHelpLabel(g, 13, "Pulse Shape", @onHelpShape, baseFont, palette);
 ddShape = uidropdown(g, "Items", {'square', 'sinusoidal'}, "Value", 'square', "FontSize", baseFont);
 ddShape.Tooltip = "Square is simple and robust. Sinusoidal is smoother and often more physiologic.";
-ddShape.Layout.Row = 11;
+ddShape.Layout.Row = 13;
 ddShape.Layout.Column = 2;
 styleInputControl(ddShape, palette);
 
-makeHelpLabel(g, 12, "Systole Segments", @onHelpSegments, baseFont, palette);
+makeHelpLabel(g, 14, "Systole Segments", @onHelpSegments, baseFont, palette);
 efSeg = uieditfield(g, "numeric", "Value", 12, "Limits", [4 100], "RoundFractionalValues", true, "FontSize", baseFont);
 efSeg.Tooltip = "Used for sinusoidal mode: number of systolic update segments.";
-efSeg.Layout.Row = 12;
-efSeg.Layout.Column = 2;
+efSeg.Layout.Row = 14;
 styleInputControl(efSeg, palette);
 
-makeHelpLabel(g, 13, "Smooth Flow Rate (uL/min)", @onHelpCalRate, baseFont, palette);
+sectionLabel3 = uilabel(g, "Text", "SMOOTH VARIABLES", "FontSize", baseFont + 1, "FontColor", [0.60 0.65 0.70], "FontWeight", "bold");
+sectionLabel3.Layout.Row = 15;
+sectionLabel3.Layout.Column = [1 2];
+
+makeHelpLabel(g, 16, "Smooth Flow Rate (uL/min)", @onHelpCalRate, baseFont, palette);
 efCrate = uieditfield(g, "numeric", "Value", 1.0, "Limits", [eps Inf], "FontSize", baseFont);
 efCrate.Tooltip = "Steady infusion rate for smooth mode.";
-efCrate.Layout.Row = 13;
+efCrate.Layout.Row = 16;
 efCrate.Layout.Column = 2;
 styleInputControl(efCrate, palette);
 
-makeHelpLabel(g, 14, "Smooth Duration (s)", @onHelpCalDuration, baseFont, palette);
+makeHelpLabel(g, 17, "Smooth Duration (s)", @onHelpCalDuration, baseFont, palette);
 efCdur = uieditfield(g, "numeric", "Value", 120, "Limits", [10 Inf], "FontSize", baseFont);
 efCdur.Tooltip = "Duration for smooth-flow dispense.";
-efCdur.Layout.Row = 14;
+efCdur.Layout.Row = 17;
 efCdur.Layout.Column = 2;
 styleInputControl(efCdur, palette);
 
-makeHelpLabel(g, 15, "Fluid Density (g/mL)", @onHelpDensity, baseFont, palette);
+sectionLabel4 = uilabel(g, "Text", "EXTRA SETTINGS", "FontSize", baseFont + 1, "FontColor", [0.60 0.65 0.70], "FontWeight", "bold");
+sectionLabel4.Layout.Row = 18;
+sectionLabel4.Layout.Column = [1 2];
+
+makeHelpLabel(g, 19, "Fluid Density (g/mL)", @onHelpDensity, baseFont, palette);
 efDen = uieditfield(g, "numeric", "Value", 0.997, "Limits", [0.8 1.2], "FontSize", baseFont);
 efDen.Tooltip = "Used for mass-to-volume conversion in calibration mode.";
-efDen.Layout.Row = 15;
+efDen.Layout.Row = 19;
 efDen.Layout.Column = 2;
 styleInputControl(efDen, palette);
 
-makeHelpLabel(g, 16, "Measured Mass (g, optional; 0 = skip)", @onHelpMeasuredMass, baseFont, palette);
+makeHelpLabel(g, 20, "Measured Mass (g, optional; 0 = skip)", @onHelpMeasuredMass, baseFont, palette);
 efMass = uieditfield(g, "numeric", "Value", 0, "Limits", [0 Inf], "FontSize", baseFont);
 efMass.Tooltip = "Optional collected mass for calibration correction.";
-efMass.Layout.Row = 16;
+efMass.Layout.Row = 20;
 efMass.Layout.Column = 2;
 styleInputControl(efMass, palette);
 
-makeStandardLabel(g, 17, "Logs Folder", baseFont, palette);
+makeStandardLabel(g, 21, "Logs Folder", baseFont, palette);
 logHint = uilabel(g, "Text", fullfile(pwd, "logs"), "FontSize", baseFont - 1, "FontColor", palette.TextMuted);
 logHint.WordWrap = "on";
-logHint.Layout.Row = 17;
+logHint.Layout.Row = 21;
 logHint.Layout.Column = 2;
 
-makeStandardLabel(g, 18, "Mode Note", baseFont, palette);
+makeStandardLabel(g, 22, "Mode Note", baseFont, palette);
 modeHint = uilabel(g, "Text", "Pulse mode: waveform control enabled.", "FontSize", baseFont - 1, "FontColor", palette.TextMain);
 modeHint.WordWrap = "on";
-modeHint.Layout.Row = 18;
+modeHint.Layout.Row = 22;
 modeHint.Layout.Column = 2;
 
-makeStandardLabel(g, 19, "Theoretical Stroke", baseFont, palette);
+makeStandardLabel(g, 23, "Theoretical Stroke", baseFont, palette);
 lblTheoretical = uilabel(g, "Text", "0.0000 nL/beat", "FontSize", baseFont, "FontColor", palette.TextMain, "FontWeight", "bold");
-lblTheoretical.Layout.Row = 19;
+lblTheoretical.Layout.Row = 23;
 lblTheoretical.Layout.Column = 2;
 
-makeStandardLabel(g, 20, "Effective Stroke", baseFont, palette);
+makeStandardLabel(g, 24, "Effective Stroke", baseFont, palette);
 lblEffective = uilabel(g, "Text", "0.0000 nL/beat", "FontSize", baseFont, "FontColor", palette.Good, "FontWeight", "bold");
-lblEffective.Layout.Row = 20;
+lblEffective.Layout.Row = 24;
 lblEffective.Layout.Column = 2;
 
-makeStandardLabel(g, 21, "Command Preview", baseFont, palette);
+makeStandardLabel(g, 25, "Command Preview", baseFont, palette);
 previewHint = uilabel(g, "Text", "Exact serial strings update in real time.", "FontSize", baseFont - 1, "FontColor", palette.TextMuted);
-previewHint.Layout.Row = 21;
+previewHint.Layout.Row = 25;
 previewHint.Layout.Column = 2;
 
 cmdPreview = uitextarea(g, "Editable", "off", "FontName", "Menlo", "FontSize", baseFont - 1, "BackgroundColor", palette.Panel, "FontColor", palette.TextMain);
-cmdPreview.Layout.Row = 22;
+cmdPreview.Layout.Row = 26;
 cmdPreview.Layout.Column = [1 2];
 
 setappdata(f, "stopRequested", false);
@@ -165,20 +180,20 @@ setappdata(f, "helpDlg", []);
 setappdata(f, "helpHtml", []);
 
 btnRun = uibutton(g, "Text", "Run", "ButtonPushedFcn", @onRun, "FontWeight", "bold", "FontSize", baseFont, "BackgroundColor", palette.RunBg, "FontColor", palette.RunFg);
-btnRun.Layout.Row = 23;
+btnRun.Layout.Row = 27;
 btnRun.Layout.Column = 1;
 
 btnStop = uibutton(g, "Text", "STOP", "ButtonPushedFcn", @onStop, "FontWeight", "bold", "FontSize", baseFont, "BackgroundColor", palette.StopBg, "FontColor", palette.StopFg);
-btnStop.Layout.Row = 23;
+btnStop.Layout.Row = 27;
 btnStop.Layout.Column = 2;
 btnStop.Enable = "off";
 
 status = uilabel(g, "Text", "Ready", "FontWeight", "bold", "FontSize", baseFont, "FontColor", palette.TextMain);
-status.Layout.Row = 24;
+status.Layout.Row = 28;
 status.Layout.Column = 1;
 
 timerLabel = uilabel(g, "Text", "Elapsed: 00:00.0", "HorizontalAlignment", "right", "FontWeight", "bold", "FontSize", baseFont, "FontColor", palette.TextMain);
-timerLabel.Layout.Row = 24;
+timerLabel.Layout.Row = 28;
 timerLabel.Layout.Column = 2;
 
 runStartTic = [];
