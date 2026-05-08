@@ -1,6 +1,0 @@
-timestamp=2026-05-08 13:40:22
-port=/dev/tty.usbmodemD1054011
-baud=9600
-mode=pulse
-syringe_profile=hamilton_100uL
-step_volume_nL=0.051900000
