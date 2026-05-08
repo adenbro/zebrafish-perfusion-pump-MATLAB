@@ -9,7 +9,7 @@ screenSize = get(0, 'ScreenSize'); % [left bottom width height]
 screenWidth = screenSize(3);
 screenHeight = screenSize(4);
 windowWidth = 560;
-windowHeight = min(830, screenHeight - 100); % Leave 100px margin for taskbar/top bar
+windowHeight = min(740, screenHeight - 100); % Leave 100px margin for taskbar/top bar
 windowLeft = max(40, (screenWidth - windowWidth) / 2);
 windowTop = max(40, (screenHeight - windowHeight) / 2);
 
@@ -19,8 +19,8 @@ f = uifigure( ...
     "Color", palette.FigureBg, ...
     "CloseRequestFcn", @onCloseFigure);
 
-g = uigridlayout(f, [28 2]);
-g.RowHeight = {28, 22, 22, 22, 22, 22, 22, 28, 22, 22, 22, 22, 22, 22, 28, 22, 22, 28, 22, 22, 22, 30, 22, 22, 22, 70, 28, 22};
+g = uigridlayout(f, [26 2]);
+g.RowHeight = {28, 22, 22, 22, 22, 22, 22, 28, 22, 22, 22, 22, 22, 22, 28, 22, 22, 28, 22, 22, 22, 30, 22, 22, 28, 22};
 g.ColumnWidth = {220, '1x'};
 g.Padding = [12 12 12 12];
 g.RowSpacing = 4;
@@ -175,34 +175,25 @@ lblEffective = uilabel(g, "Text", "0.0000 nL/beat", "FontSize", baseFont, "FontC
 lblEffective.Layout.Row = 24;
 lblEffective.Layout.Column = 2;
 
-makeStandardLabel(g, 25, "Command Preview", baseFont, palette);
-previewHint = uilabel(g, "Text", "Exact serial strings update in real time.", "FontSize", baseFont - 1, "FontColor", palette.TextMuted);
-previewHint.Layout.Row = 25;
-previewHint.Layout.Column = 2;
-
-cmdPreview = uitextarea(g, "Editable", "off", "FontName", "Menlo", "FontSize", baseFont - 1, "BackgroundColor", palette.Panel, "FontColor", palette.TextMain);
-cmdPreview.Layout.Row = 26;
-cmdPreview.Layout.Column = [1 2];
-
 setappdata(f, "stopRequested", false);
 setappdata(f, "helpDlg", []);
 setappdata(f, "helpHtml", []);
 
 btnRun = uibutton(g, "Text", "Run", "ButtonPushedFcn", @onRun, "FontWeight", "bold", "FontSize", baseFont, "BackgroundColor", palette.RunBg, "FontColor", palette.RunFg);
-btnRun.Layout.Row = 27;
+btnRun.Layout.Row = 25;
 btnRun.Layout.Column = 1;
 
 btnStop = uibutton(g, "Text", "STOP", "ButtonPushedFcn", @onStop, "FontWeight", "bold", "FontSize", baseFont, "BackgroundColor", palette.StopBg, "FontColor", palette.StopFg);
-btnStop.Layout.Row = 27;
+btnStop.Layout.Row = 25;
 btnStop.Layout.Column = 2;
 btnStop.Enable = "off";
 
 status = uilabel(g, "Text", "Ready", "FontWeight", "bold", "FontSize", baseFont, "FontColor", palette.TextMain);
-status.Layout.Row = 28;
+status.Layout.Row = 26;
 status.Layout.Column = 1;
 
 timerLabel = uilabel(g, "Text", "Elapsed: 00:00.0", "HorizontalAlignment", "right", "FontWeight", "bold", "FontSize", baseFont, "FontColor", palette.TextMain);
-timerLabel.Layout.Row = 28;
+timerLabel.Layout.Row = 26;
 timerLabel.Layout.Column = 2;
 
 runStartTic = [];
@@ -391,68 +382,68 @@ updateDerivedDisplays();
             lblEffective.FontColor = palette.Good;
         end
 
-        cmdPreview.Value = buildCommandPreview(effectiveSv);
+        % cmdPreview.Value = buildCommandPreview(effectiveSv); % Command preview disabled
     end
 
-    function lines = buildCommandPreview(effectiveSv)
-        if string(ddMode.Value) == "smooth"
-            lines = [ ...
-                sprintf("irate %.6f u/m", efCrate.Value)
-                "run"
-                sprintf("... flow for %.3f s ...", efCdur.Value)
-                "stop"
-                ];
-            return;
-        end
-
-        bpm = efBpm.Value;
-        duty = efDuty.Value;
-        pulseMode = string(ddPulseDelivery.Value);
-
-        beatPeriod_s = 60 / max(bpm, 1e-9);
-        systoleDuration_s = beatPeriod_s * duty;
-        diastoleDuration_s = beatPeriod_s - systoleDuration_s;
-
-        if pulseMode == "bench"
-            diastoleRate_nL_min = 10.0;
-        else
-            diastoleRate_nL_min = 0.0;
-        end
-
-        diastoleVolPerBeat_nL = diastoleRate_nL_min * (diastoleDuration_s / 60);
-        systoleVolume_nL = max(effectiveSv - diastoleVolPerBeat_nL, 0);
-        systoleRate_nL_min = (systoleVolume_nL / max(systoleDuration_s, eps)) * 60;
-
-        rateCompGain = 1.0;
-        if string(ddSyr.Value) == "terumo_1mL" && pulseMode == "physiology"
-            rateCompGain = 1 / 0.667;
-        end
-        cmdRate = systoleRate_nL_min * rateCompGain;
-
-        if pulseMode == "bench"
-            lines = [ ...
-                sprintf("irate %.6f nl/m", diastoleRate_nL_min)
-                "run"
-                sprintf("irate %.6f nl/m", cmdRate)
-                sprintf("irate %.6f nl/m", diastoleRate_nL_min)
-                "... repeat each beat ..."
-                "stop"
-                ];
-        else
-            lines = [ ...
-                sprintf("irate %.6f nl/m", cmdRate)
-                "run"
-                "stop"
-                "... repeat each beat ..."
-                "stop"
-                ];
-        end
-
-        if string(ddShape.Value) == "sinusoidal"
-            lines = [lines; sprintf("%% sinusoidal shape with %d segments/beat", round(efSeg.Value))];
-        end
-        lines = string(lines(:));
-    end
+    % function lines = buildCommandPreview(effectiveSv)
+    %     if string(ddMode.Value) == "smooth"
+    %         lines = [ ...
+    %             sprintf("irate %.6f u/m", efCrate.Value)
+    %             "run"
+    %             sprintf("... flow for %.3f s ...", efCdur.Value)
+    %             "stop"
+    %             ];
+    %         return;
+    %     end
+    %
+    %     bpm = efBpm.Value;
+    %     duty = efDuty.Value;
+    %     pulseMode = string(ddPulseDelivery.Value);
+    %
+    %     beatPeriod_s = 60 / max(bpm, 1e-9);
+    %     systoleDuration_s = beatPeriod_s * duty;
+    %     diastoleDuration_s = beatPeriod_s - systoleDuration_s;
+    %
+    %     if pulseMode == "bench"
+    %         diastoleRate_nL_min = 10.0;
+    %     else
+    %         diastoleRate_nL_min = 0.0;
+    %     end
+    %
+    %     diastoleVolPerBeat_nL = diastoleRate_nL_min * (diastoleDuration_s / 60);
+    %     systoleVolume_nL = max(effectiveSv - diastoleVolPerBeat_nL, 0);
+    %     systoleRate_nL_min = (systoleVolume_nL / max(systoleDuration_s, eps)) * 60;
+    %
+    %     rateCompGain = 1.0;
+    %     if string(ddSyr.Value) == "terumo_1mL" && pulseMode == "physiology"
+    %         rateCompGain = 1 / 0.667;
+    %     end
+    %     cmdRate = systoleRate_nL_min * rateCompGain;
+    %
+    %     if pulseMode == "bench"
+    %         lines = [ ...
+    %             sprintf("irate %.6f nl/m", diastoleRate_nL_min)
+    %             "run"
+    %             sprintf("irate %.6f nl/m", cmdRate)
+    %             sprintf("irate %.6f nl/m", diastoleRate_nL_min)
+    %             "... repeat each beat ..."
+    %             "stop"
+    %             ];
+    %     else
+    %         lines = [ ...
+    %             sprintf("irate %.6f nl/m", cmdRate)
+    %             "run"
+    %             "stop"
+    %             "... repeat each beat ..."
+    %             "stop"
+    %             ];
+    %     end
+    %
+    %     if string(ddShape.Value) == "sinusoidal"
+    %         lines = [lines; sprintf("%% sinusoidal shape with %d segments/beat", round(efSeg.Value))];
+    %     end
+    %     lines = string(lines(:));
+    % end
 
     function onTimerTick(~, ~)
         if isempty(runStartTic)
